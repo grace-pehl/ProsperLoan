@@ -1,0 +1,226 @@
+---
+output: 
+  html_document: 
+    keep_md: yes
+---
+Exploratory Analysis of Prosper.com Loans
+========================================================
+#### Grace Pehl, PhD
+#### Udacity Data Analyst Nanodegree Project 4
+
+[Prosper Loan data](https://docs.google.com/document/d/1qEcwltBMlRYZT-l699-71TzInWfk4W9q5rTCSvDVMpc/pub?embedded=true) provided by Udacity (last updated 3/11/14)
+
+[Prosper.com](https://www.prosper.com/) is a peer-to-peer lending marketplace.  Borrowers make loan 
+requests and investors contribute as little as $25 towards the loans of their 
+choice. Historically, Prosper made their loan data public nightly, however, effective January 2015, information will be made available 45 days after the end of the quarter. 
+
+```{r echo=FALSE, message=FALSE}
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+library(lubridate)
+library(tidyr)
+library(knitr)
+opts_chunk$set(echo = FALSE)
+```
+
+## Exploring the Dataset
+
+```{r cache=TRUE, LoadData}
+dataurl <- "https://docs.google.com/document/d/1qEcwltBMlRYZT-l699-71TzInWfk4W9q5rTCSvDVMpc/pub?embedded=true"
+datafile <- "prosperLoanData.csv"
+
+if (!exists("loans")) {
+    if (!file.exists(datafile)) {
+        download.file(dataurl, datafile)
+    }
+    fulldf <- read.csv("prosperLoanData.csv")
+    # convert to date class and drop empty time notation
+    fulldf$LoanOriginationDate <-  
+        ymd_hms(as.character(fulldf$LoanOriginationDate))
+    # Category of Loan: shorten name and convert to factor
+    fulldf <- rename(fulldf, LoanType = ListingCategory..numeric.)
+    fulldf$LoanType <- factor(fulldf$LoanType, levels = seq(0:20), 
+                         labels = c("Not Applicable", "Debt Consolidation", 
+                                  "Home Improvement", "Business", 
+                                  "Personal Loan", "Student Use", "Auto", 
+                                  "Other", "Baby&Adoption", "Boat", 
+                                  "Cosmetic Procedure", "Engagement Ring", 
+                                  "Green Loans", "Household Expenses", 
+                                  "Large Purchases", "Medical/Dental", 
+                                  "Motorcycle", "RV", "Taxes", "Vacation", 
+                                  "Wedding Loans"))
+    fulldf <- fulldf %>% mutate(CreditScore = 0.5 * (CreditScoreRangeLower +
+                                CreditScoreRangeUpper)) %>%
+              select(-CreditScoreRangeLower, -CreditScoreRangeUpper)
+}
+dim(fulldf)
+names(fulldf)
+```
+
+### Problems with the structure of some variables.
+
+1. ListingCategory is had some problematic characters that were converted to 
+dots and would be more useful with the categories rather than integers.  Rename to LoanType and convert to a factor.  
+2. Converted LoanOriginationDate to Date class
+2. Credit Score is represented by two values providing a range.  I'd like to have a single value, so I'll create a new value that is the average of the upper and lower ranges.
+
+## Univariate Plots
+
+```{r}
+loans <- fulldf %>% select(StatedMonthlyIncome, IncomeRange, DebtToIncomeRatio, CreditScore, LoanType, LoanOriginalAmount, LoanOriginationQuarter)
+qplot(LoanType, data = loans)
+```
+
+The majority of loans do not use one of the suggested categories, since the first bar of this chart is "Not Applicable" and the last bar is NA and together they account for more than half the rows of data.
+
+```{r echo=FALSE}
+qplot(CreditScore, data = loans, xlim = c(300, 850))
+```
+
+Credit scores range from 300 to 850.  Prosper borrower have a median score of 690, which is considered good credit.  Prosper now requires a minimum credit score of 640 for new borrowers or 600 for returning borrowers, but initially, subprime borrowers could also apply for loans.
+
+```{r}
+qplot(IncomeRange, data = loans)
+```
+
+The plot of income range looks very symmetric until I notice that the categories are not in the correct order.
+
+```{r}
+loans$IncomeRange <- ordered(loans$IncomeRange, levels = c("Not displayed",
+                     "Not employed", "$0", "$1-24,999", "$25,000-49,999", 
+                      "$50,000-74,999", "$75,000-99,999", "$100,000+"))
+qplot(IncomeRange, data = loans)
+```
+
+Few loans are made to borrowers with incomes below $25,000.  There should be a
+similar distribution seen in the borrowers' monthly income. But the max value is 1.75 million. The maximum loan amount is only $35,000 with a 3-year term, which would not be worth the time spent applying for someone making millions a month. Actually, this loan was for $4000.
+
+In fact, there are 530 loans with stated monthly income greater than $25,000. Plotting the amount of their loans shows that they tend to request fairly small amounts.  It seems likely to me that some people entered their annual income in place of their monthly income (though that doesn't explain the $1750000 entry). 
+
+There is also a variable for IncomeRange that uses annual income.  If these columns are independent (ie one from the credit report and one from the borrower's application), then IncomeRange should roughly equal StatedMonthlyIncome for these rows.  If IncomeRange is calculated from the borrower's StatedMonthlyIncome, then all of these rows would be in the $100,000+ category, which is the case in the following plot.
+
+```{r}
+x <- loans %>% filter(StatedMonthlyIncome > 25000)
+g <- qplot(LoanOriginalAmount, data = x)
+g1 <- qplot(IncomeRange, data = x)
+grid.arrange(g, g1, nrow = 1)
+```
+
+Since I don't believe wealthy people would be borrowing comparatively small amount, this means we can't cross-check the borrower's income this way and we have to be certain to only include one of these variables in any model later on.
+
+```{r}
+qplot(LoanOriginalAmount, data = loans, xlim = c(1000, 35000))
+summary(loans$LoanOriginalAmount)
+```
+
+Half of all Prosper loans are for $1000 - $6500. The most common amount requested appears to be $4,000.
+
+## Univariate Analysis
+
+#### What is the structure of your dataset?
+The ProsperLoan dataset contains 81 variables about `r nrow(fulldf)` loans made through the prosper.com marketplace.  The loans cover the period `r range(fulldf$LoanOriginationDate)`.
+
+#### What is/are the main feature(s) of interest in your dataset?
+The main feature of the borrowers is their ProsperRating (a proprietary rating system), which is based on their credit score and history with Prosper loans.
+
+For investors, the main features of interest are the LenderYield (interest rate minus the service fee) and the LP_NetPrincipalLoss, which is the principal that remains uncollected after any recoveries.
+
+As a business, Prosper would be most concerned with LP_ServiceFees and LP_CollectionFees, which form their primary revenue source.
+
+#### What other features in the dataset do you think will help support your investigation into your feature(s) of interest?
+
+Prosper sorts borrowers into categories using the ProsperRating and uses the categories to assign interest rates.  I would like to investigate how other variables differ between ProsperRating groups especially default rates and lender yields.
+
+#### Did you create any new variables from existing variables in the dataset?
+
+I created a single CreditScore by averaging the CreditScoreRangeUpper and CreditScoreRangeLower variables.  I anticipate creating other variables to determine the final profit/loss from each loan. 
+
+#### Of the features you investigated, were there any unusual distributions? Did you perform any operations on the data to tidy, adjust, or change the form of the data? If so, why did you do this?
+
+StatedMonthlyIncome had a very long tail that included values that don't make sense given the size and term of Prosper loans. It seems like the large values are user-entered errors because the other values make logical sense.  The rows with StatedIncomeRange > 25000 should be excluded from any analysis that involves StatedMonthlyIncome or IncomeRange.
+
+# Bivariate Plots Section
+
+When I think of bivariate plots, I first turn to timeseries.  Flipping through the [Prosper 2013 annual report](https://www.prosper.com/Downloads/Legal/prosper10k12312013.pdf), I found an Excel chart of loan originations by quarter on page 74 and wondered if I could recreate it in ggplot.
+
+```{r echo=FALSE, Bivariate_Plots}
+# aggregate dollar originations July 2009 - Dec 2013
+# modeled on pg 74 of 2013 annual report
+origination <- fulldf %>% select(LoanOriginalAmount, LoanOriginationDate,
+                                LoanOriginationQuarter) %>%
+               group_by(Quarter = LoanOriginationQuarter) %>%
+               summarise(Originations = sum(LoanOriginalAmount)/ 10 ^ 6) %>%
+               separate(col = Quarter,
+                        into = c("Quarters", "Year"), sep = " ") %>%
+               unite(col = Quarter, Year, Quarters, sep = " ") %>%
+               arrange(Quarter) %>%
+               filter(Quarter < "2014 Q1")
+
+g <- ggplot(origination, aes(x = Quarter, y = Originations)) +
+     geom_bar(stat = "identity", fill = "green4") +
+     geom_text(aes(label = round(Originations, 0)), vjust = -0.5, size = 4) +
+     theme(axis.text.x = element_text(angle = 90, vjust = 0.5),
+           axis.title.x = element_blank()) +
+     ylab("Dollar Originations (millions)") +
+     ggtitle("Quarterly Dollar Originations through FY 2013")
+    g
+```
+
+The chart in the annual report began in the third quarter of 2009.  The period  of October 15, 2008 to July 13, 2009 is known as Prosper's [Quiet Period](http://www.lendacademy.com/a-look-back-at-the-lending-club-and-prosper-quiet-periods/)
+
+# Bivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the investigation. How did the feature(s) of interest vary with other features in the dataset?
+
+### Did you observe any interesting relationships between the other features (not the main feature(s) of interest)?
+
+### What was the strongest relationship you found?
+
+
+
+
+# Multivariate Plots Section
+
+```{r echo=FALSE, Multivariate_Plots}
+
+```
+
+# Multivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the investigation. Were there features that strengthened each other in terms of looking at your feature(s) of interest?
+
+### Were there any interesting or surprising interactions between features?
+
+### OPTIONAL: Did you create any models with your dataset? Discuss the strengths and limitations of your model.
+
+------
+
+# Final Plots and Summary
+
+### Plot One
+```{r echo=FALSE, Plot_One}
+
+```
+
+### Description One
+
+
+### Plot Two
+```{r echo=FALSE, Plot_Two}
+
+```
+
+### Description Two
+
+
+### Plot Three
+```{r echo=FALSE, Plot_Three}
+
+```
+
+### Description Three
+
+------
+
+# Reflection
