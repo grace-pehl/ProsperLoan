@@ -66,11 +66,12 @@ if (!exists("fulldf")) {
            "Green Loans", "Household Expenses", "Large Purchases",
            "Medical/Dental", "Motorcycle", "RV", "Taxes", "Vacation", 
            "Wedding Loans")
-    fulldf$LoanType <- factor(fulldf$LoanType, levels = seq(0:20), labels = x)
+    fulldf$ListingCategory <- factor(fulldf$ListingCategory, 
+                                     levels = seq(0:20), labels = x)
     # Average credit score range into single value
     fulldf <- fulldf %>% 
-              select(CreditScoreRangeLower, CreditScoreRangeUpper) %>%
-              mutate(CreditScore = mean(CreditScoreRangeLower, CreditScoreRangeUpper))
+              mutate(CreditScore = CreditScoreRangeLower * 0.5 + 
+                                   CreditScoreRangeUpper * 0.5)
 }
 dim(fulldf)
 names(fulldf)
@@ -85,7 +86,7 @@ names(fulldf)
 ## Univariate Plots
 
 ```{r}
-qplot(LoanType, data = fulldf)
+qplot(ListingCategory, data = fulldf)
 ```
 
 The majority of loans do not use one of the suggested categories, since the first bar of this chart is "Not Applicable" and the last bar is NA and together they account for more than half the rows of data.
@@ -249,10 +250,103 @@ boxplot(ProsperRating ~ ProsperRatingCategory, data = fulldf)
 Well, that's the most boring thing ever.  The numeric rating is just the levels of the Categories.  Well, I can get the ordering over with by combining the two columns.  I'll just call the result Rating, since I'm tired of typing ProsperRating.  Now, what will make a nice boxplot . . . CreditScore!  We can see how the two measures compare.
 
 ```{r}
-fulldf <- fulldf %>% mutate(Rating = factor(x = ifelse(!is.na(ProsperRating), ProsperRating, 8), levels = 1:8, labels = c("AA", "A", "B", "C", "D", "E", "HR", "Q")))
+fulldf <- fulldf %>% mutate(Rating = ordered(x = ifelse(!is.na(ProsperRating), ProsperRating, 0), levels = 0:7, labels = c("Q", "HR", "E", "D", "C", "B", "A", "AA")))
 
-boxplot(CreditScore ~ Rating, data = fulldf)
+boxplot(CreditScore ~ Rating, data = fulldf, ylim = c(600, 850))
 ```
+
+The trend is generally that higher ratings have higher credit scores, but Prosper clearly uses more than credit score, since there is a lot of overlap between the ratings.  
+
+```{r}
+boxplot(BorrowerAPR ~ Rating, data = fulldf)
+```
+
+There is much less overlap in the APR (interest rate) the borrowers are assigned.
+
+How do default rates vary across the Ratings?
+
+```{r}
+catdefaultsdf <- fulldf %>% filter(as.numeric(Results) < 2) %>%
+                 group_by(Quarter = LoanOriginationQuarter, Rating) %>%
+                 summarize(Loans = n())
+
+ggCatdefaults <- ggplot(data = catdefaultsdf, 
+                        aes(x = Quarter, y = Loans, 
+                            color = Rating, group = Rating)) +
+                 geom_line() +
+                 theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+                 xlab("Loan Origination") +
+                 ylab("Defaults (Thousands)") +
+                 ggtitle("Defaults for Loans Originated through FY 2013")
+ggCatdefaults
+```
+
+It's hard to judge since the pre 2009 loans are all lumped together.  I could either exclude them, or try to split them along the CreditGrade variable that was in use prior to 2009.
+
+```{r}
+fulldf$ProsperRating <- ordered(fulldf$ProsperRating, labels = c("HR", "E", "D", "C", "B", "A", "AA"))
+fulldf <- fulldf %>% mutate(Rating = ordered(ifelse(!is.na(ProsperRating), as.character(ProsperRating), as.character(CreditGrade))))
+
+catdefaultsdf <- fulldf %>% 
+                 group_by(Quarter = LoanOriginationQuarter, Rating, Results) %>%
+                 summarize(Loans = n())
+
+ggCatdefaults <- ggplot(data = subset(catdefaultsdf, as.numeric(Results) < 2), 
+                        aes(x = Quarter, y = Loans, 
+                            color = Rating, group = Rating)) +
+                 geom_line() +
+                 theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+                 xlab("Loan Origination") +
+                 ggtitle("Defaults for Loans Originated through FY 2013")
+ggCatdefaults
+```
+
+This really doesn't stand out as well as I thought it would.  There are high numbers of defaults from categories D through HR.  Perhaps if it were expressed as a rate rather than absolute numbers of loans that end in default.
+
+```{r}
+catRateDefaultsdf <- fulldf %>% 
+                 group_by(Quarter = LoanOriginationQuarter, Rating, Results) %>%
+                 summarize(TotalperRating = n()) %>%
+                 mutate(Rate = TotalperRating / sum(TotalperRating)) 
+                 
+
+ggCatRateDefaults <- ggplot(data = subset(catRateDefaultsdf, 
+                                          as.numeric(Results) < 2), 
+                        aes(x = Quarter, y = Rate, 
+                            color = Rating, group = Rating)) +
+                 geom_line() +
+                 theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+                 xlab("Loan Origination") +
+                 ggtitle("Default Rate for Loans Originated through FY 2013")
+ggCatRateDefaults
+```
+
+That is a lot clearer and the default rates track roughly with the risk categories.  Default rates are much higher than I would have expected.  The E and HR groups, even post-recession have 25-30% of loans default.
+
+```{r}
+ggDefaultsCategory <- ggplot(data = defaultersdf, 
+                             aes(x = ProsperRatingCategory, 
+                                 y = Loans, fill = Results)) +
+                      geom_bar(stat = "identity") 
+ggDefaultsCategory
+
+ggLoanAmounts <- ggplot(data = arrange(fulldf, Results), 
+                        aes(x = Rating, y = LoanOriginalAmount, 
+                            fill = Results)) +
+                 geom_bar(stat = "identity")
+ggLoanAmounts
+```
+
+This plot is just based on the total original loan amount and does not reflect any payments the borrower made before going into default.
+
+```{r}
+ggLoss <- ggplot(data = arrange(fulldf, Results), 
+                 aes(x = Rating, 
+                     y = LP_GrossPrincipalLoss / LoanOriginalAmount)) +
+          geom_bar(stat = "identity")
+ggLoss
+```
+
 
 ### Correlations
 
