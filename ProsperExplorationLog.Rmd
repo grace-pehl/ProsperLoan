@@ -212,7 +212,7 @@ ggWhoDefaults <- ggplot(defaultersdf, aes(x = ProsperRatingCategory, y = Loans,
 ggWhoDefaults
 ```
 
-The bars are in the wrong order since AA is lower risk than A.  Odd that D has a higher default rate than E and E and HR (for High Risk) are about the same.  Variable definitions note that the ProsperRating was introduced in 2009, so that blank column must represent all of the pre-2009 loans, when they used something called the CreditGrade to rank borrowers.  I'm surprised the company survived the quiet period when they couldn't make new loans and over a third of their prior loans went into default.  I'd like to see how well the default rate matches with Prosper's expectations, but then I'd need Time, Results, and ProsperRating, which is definitely not univariate.
+The bars are in the wrong order since AA is lower risk than A.  D has more defaults than E, but also more loans. E and HR (for High Risk) have about the same number of defaults, but E's rate is lower.  Variable definitions note that the ProsperRating was introduced in 2009, so that blank column must represent all of the pre-2009 loans, when they used something called the CreditGrade to rank borrowers.  I'm surprised the company survived the quiet period when they couldn't make new loans and over a third of their prior loans went into default.  I'd like to see how well the default rate matches with Prosper's expectations, but then I'd need Time, Results, and ProsperRating, which is definitely not univariate.
 
 ## Univariate Analysis
 
@@ -253,6 +253,7 @@ Well, that's the most boring thing ever.  The numeric rating is just the levels 
 fulldf <- fulldf %>% mutate(Rating = ordered(x = ifelse(!is.na(ProsperRating), ProsperRating, 0), levels = 0:7, labels = c("Q", "HR", "E", "D", "C", "B", "A", "AA")))
 
 boxplot(CreditScore ~ Rating, data = fulldf, ylim = c(600, 850))
+c(cor(as.numeric(fulldf$CreditScore), as.numeric(fulldf$Rating)), cor(fulldf$CreditScore, fulldf$ProsperScore), cor(fulldf$CreditScore, as.numeric(fulldf$CreditGrade)))
 ```
 
 The trend is generally that higher ratings have higher credit scores, but Prosper clearly uses more than credit score, since there is a lot of overlap between the ratings.  
@@ -312,11 +313,12 @@ catRateDefaultsdf <- fulldf %>%
 
 ggCatRateDefaults <- ggplot(data = subset(catRateDefaultsdf, 
                                           as.numeric(Results) < 2), 
-                        aes(x = Quarter, y = Rate, 
+                        aes(x = Quarter, y = Rate * 100, 
                             color = Rating, group = Rating)) +
                  geom_line() +
                  theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) +
                  xlab("Loan Origination") +
+                 ylab("Rate (percentage)") +
                  ggtitle("Default Rate for Loans Originated through FY 2013")
 ggCatRateDefaults
 ```
@@ -337,26 +339,71 @@ ggLoanAmounts <- ggplot(data = arrange(fulldf, Results),
 ggLoanAmounts
 ```
 
-This plot is just based on the total original loan amount and does not reflect any payments the borrower made before going into default.
+This last plot is just based on the total original loan amount and does not reflect any payments the borrower made before going into default.  Prosper also uses a collections agency to try to recover more money from delinquent borrowers, payments received are used to pay (in order) fees, interest, and principal.  There are two variables relating to the loss from a loan.  LP_GrossPrincipalLoss is the gross charged off amount of the loan.  LP_NetPrincipalLoss the the principal that remains uncollected after any recoveries.  My interpretation of these variables is the the gross loss is the uncollected principal plus unpaid interest and fees.  So, I think that gross loss is of more concern to investors.
 
 ```{r}
-ggLoss <- ggplot(data = arrange(fulldf, Results), 
+ggLossCat <- ggplot(data = arrange(fulldf, Results), 
                  aes(x = Rating, 
                      y = LP_GrossPrincipalLoss / LoanOriginalAmount)) +
-          geom_bar(stat = "identity")
-ggLoss
+             geom_bar(stat = "summary", fun.y = mean)
+ggLossCat
 ```
 
-
-### Correlations
-
-Calculate correlations between numeric variables.
+The average loss rate per dollar invested
 
 ```{r}
-names(fulldf[sapply(fulldf, is.numeric)]) # List of all 59 numeric variables
-corrtable <- data.frame(round(cor(fulldf[sapply(fulldf, is.numeric)], use = "complete"), 2))
-corrtable[corrtable$ProsperRating..numeric. > 0.5, "ProsperRating..numeric."]
+ggLossCatTime <- ggplot(data = arrange(fulldf, Results), 
+                 aes(x = LoanOriginationQuarter, 
+                     y = LP_GrossPrincipalLoss / LoanOriginalAmount)) +
+                 geom_bar(stat = "summary", fun.y = mean) +
+                 facet_wrap(~ Rating)
+ggLossCatTime
+```
+I want to see what are the main factors correlate with default.  Based on this plot, I'm going to exclude everything from before July 2009 (the end of the "quiet period") and only include loans that have a ProsperRating.  I'm only going to use loans that are completed, so I will exclude LoanStatus of Current or Past Due.
+```{r}
+start_date <- ymd("2009-07-15")
+loans <- fulldf %>% 
+         mutate(InvestorProfit = LP_CustomerPayments - LoanOriginalAmount +
+                                 LP_ServiceFees + LP_CollectionFees + 
+                                 LP_NonPrincipalRecoverypayments,
+                InvestorProfitRate = InvestorProfit / LoanOriginalAmount
+                ) %>% 
+         filter(LoanStatus %in% c("Completed", "Chargedoff", "Defaulted",
+                                  "FinalPaymentInProgress")) %>% 
+         filter(LoanOriginationDate >= start_date) %>% 
+         filter(Rating != "") %>% 
+         select(Results, InvestorProfit, InvestorProfitRate, Rating,
+                LoanOriginationDate, LoanOriginationQuarter,
+                LoanOriginalAmount, BorrowerAPR, Term, ListingCategory,
+                CreditScore, RevolvingCreditBalance, 
+                AvailableBankcardCredit, StatedMonthlyIncome) %>% 
+         droplevels()
+dim(loans)
+table(loans$Results, loans$Rating)
+```
+I also made a column for the InvestorProfit and the InvestorProfitRate for each loan.  With this smaller dataset, I'm ready to look at some scatterplots.
+```{r}
+ggplot(loans, aes(LoanOriginationDate, InvestorProfit)) +  geom_point(aes(color = Results), alpha = 0.05) + 
+geom_smooth(stat = 'summary', fun.y = mean)
+```
+This is not what I expected.  Why would invest in these lending sites if this was the real picture?  So what went wrong?  From [the Prosper website](https://www.prosper.com/invest/marketplace-performance/):  
+> Why do we show Seasoned Returns?
+As a Prosper investor, your return is based on the lifecycle of the underlying Notes within your portfolio. Because a Note cannot default until it's missed five payments, the return for a portfolio composed solely of young notes will be based entirely on those loans that remain current. This can result in a temporarily higher return for young portfolios than should be expected.
+As your Notes age, you may see initial defaults occur between their fifth and ninth months of age. Our research shows that Prosper Note returns historically have shown increased stability after they've reached ten months of age. For that reason, we provide "Actual Seasoned Returns", defined as the Actual Return for Notes aged 10 months or more.
 
+This dataset was saved March 2014, so Prosper would exclude notes after May 2013, which would eliminate the recent losses. Maybe I'm introduing bias by excluding current loans.  While Prosper does not have a prepayment penalty, I would expect most loans that end before their term is up to have defaulted.  Prosper loans have 1, 3, or 5 year terms, so that's March 2013, March 2011, and March 2009 (which is prior to the start of new lending terms). I had excluded current loans, becuase the investor has not earned back his investment and has a paper loss, that may become a profit with time.  If I subset out only the loans past their term, how many does that leave?  
+
+```{r}
+loans2 <- loans %>% 
+          filter((LoanOriginationDate < ymd("2013-03-11") & Term <= 12) |
+                 (LoanOriginationDate < ymd("2011-03-11") & Term <= 36)) %>%           droplevels()
+dim(loans2)
+```
+That seems to be enough to play with to see what factors affect default rate. Let's try the Profit/Origination Plot again.
+
+```{r}
+ggplot(loans2, aes(LoanOriginationDate, InvestorProfitRate)) +  geom_point(aes(color = factor(Term)), alpha = 0.1) + 
+geom_smooth(method = lm)
 ```
 
 
