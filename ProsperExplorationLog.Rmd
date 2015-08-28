@@ -86,7 +86,7 @@ dim(fulldf)
 
 ```{r}
 qplot(ListingCategory, data = fulldf) + 
-    opts(axis.text.x = theme_text(angle = -90))
+    theme(axis.text.x = theme_text(angle = -90))
 ```
 
 The majority of loans do not use one of the suggested categories, since the first bar of this chart is "Not Applicable" and the last bar is NA and together they account for more than half the rows of data.
@@ -98,7 +98,7 @@ qplot(CreditScore, data = fulldf, xlim = c(300, 850))
 Credit scores range from 300 to 850.  Prosper borrower have a median score of `r median(fulldf$CreditScore)`, which is considered good credit.  Prosper now requires a minimum credit score of 640 for new borrowers or 600 for returning borrowers, but initially, subprime borrowers could also apply for loans.
 
 ```{r}
-qplot(IncomeRange, data = fulldf) + opts(axis.text.x = theme_text(angle = -90))
+qplot(IncomeRange, data = fulldf) + theme(axis.text.x = theme_text(angle = -90))
 ```
 
 The plot of income range looks very symmetric until I notice that the categories are not in the correct order.
@@ -107,7 +107,7 @@ The plot of income range looks very symmetric until I notice that the categories
 fulldf$IncomeRange <- ordered(fulldf$IncomeRange, levels = c("Not displayed",
                      "Not employed", "$0", "$1-24,999", "$25,000-49,999", 
                       "$50,000-74,999", "$75,000-99,999", "$100,000+"))
-qplot(IncomeRange, data = fulldf) + opts(axis.text.x = theme_text(angle = -90))
+qplot(IncomeRange, data = fulldf) + theme(axis.text.x = theme_text(angle = -90))
 ```
 
 Few loans are made to borrowers with incomes below $25,000.  There should be a
