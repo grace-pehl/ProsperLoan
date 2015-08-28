@@ -28,7 +28,7 @@ library(lubridate)
 library(tidyr)
 # opts_chunk
 library(knitr)
-opts_chunk$set(echo = FALSE)
+opts_chunk$set(echo = FALSE, cache.path = 'cache/', fig.path = 'figure/')
 ```
 
 ## Exploring the Dataset
@@ -42,7 +42,7 @@ if (!exists("fulldf")) {
     if (!file.exists(datafile)) {
         download.file(dataurl, datafile)
     }
-    fulldf <- read.csv("prosperLoanData.csv")
+    fulldf <- read.csv(datafile)
     ######## Cleaning Variable Names and Classes
     # convert to date class and drop empty time notation using lubridate
     x <- as.character(fulldf$LoanOriginationDate)
@@ -85,19 +85,20 @@ dim(fulldf)
 ## Univariate Plots
 
 ```{r}
-qplot(ListingCategory, data = fulldf)
+qplot(ListingCategory, data = fulldf) + 
+    opts(axis.text.x = theme_text(angle = -90))
 ```
 
 The majority of loans do not use one of the suggested categories, since the first bar of this chart is "Not Applicable" and the last bar is NA and together they account for more than half the rows of data.
 
-```{r echo=FALSE}
+```{r}
 qplot(CreditScore, data = fulldf, xlim = c(300, 850))
 ```
 
 Credit scores range from 300 to 850.  Prosper borrower have a median score of `r median(fulldf$CreditScore)`, which is considered good credit.  Prosper now requires a minimum credit score of 640 for new borrowers or 600 for returning borrowers, but initially, subprime borrowers could also apply for loans.
 
 ```{r}
-qplot(IncomeRange, data = fulldf)
+qplot(IncomeRange, data = fulldf) + opts(axis.text.x = theme_text(angle = -90))
 ```
 
 The plot of income range looks very symmetric until I notice that the categories are not in the correct order.
@@ -106,7 +107,7 @@ The plot of income range looks very symmetric until I notice that the categories
 fulldf$IncomeRange <- ordered(fulldf$IncomeRange, levels = c("Not displayed",
                      "Not employed", "$0", "$1-24,999", "$25,000-49,999", 
                       "$50,000-74,999", "$75,000-99,999", "$100,000+"))
-qplot(IncomeRange, data = fulldf)
+qplot(IncomeRange, data = fulldf) + opts(axis.text.x = theme_text(angle = -90))
 ```
 
 Few loans are made to borrowers with incomes below $25,000.  There should be a
@@ -211,7 +212,7 @@ ggWhoDefaults <- ggplot(defaultersdf, aes(x = ProsperRatingCategory, y = Loans,
 ggWhoDefaults
 ```
 
-The bars are in the wrong order since AA is lower risk than A.  D has more defaults than E, but also more loans. E and HR (for High Risk) have about the same number of defaults, but E's rate is lower.  Variable definitions note that the ProsperRating was introduced in 2009, so that blank column must represent all of the pre-2009 loans, when they used something called the CreditGrade to rank borrowers.  I'm surprised the company survived the quiet period when they couldn't make new loans and over a third of their prior loans went into default.  I'd like to see how well the default rate matches with Prosper's expectations, but then I'd need Time, Results, and ProsperRating, which is definitely not univariate.
+D has more defaults than E, but also more loans. E and HR (for High Risk) have about the same number of defaults, but E's rate is lower.  Variable definitions note that the ProsperRating was introduced in 2009, so that blank column must represent all of the pre-2009 loans, when they used something called the CreditGrade to rank borrowers.  I'm surprised the company survived the quiet period when they couldn't make new loans and over a third of their prior loans went into default.  I'd like to see how well the default rate matches with Prosper's expectations, but then I'd need Time, Results, and ProsperRating, which is definitely not univariate.
 
 ## Univariate Analysis
 
@@ -249,7 +250,11 @@ boxplot(ProsperRating ~ ProsperRatingCategory, data = fulldf)
 Well, that's the most boring thing ever.  The numeric rating is just the levels of the Categories.  Well, I can get the ordering over with by combining the two columns.  I'll just call the result Rating, since I'm tired of typing ProsperRating.  Now, what will make a nice boxplot . . . CreditScore!  We can see how the two measures compare.
 
 ```{r}
-fulldf <- fulldf %>% mutate(Rating = ordered(x = ifelse(!is.na(ProsperRating), ProsperRating, 0), levels = 0:7, labels = c("Q", "HR", "E", "D", "C", "B", "A", "AA")))
+fulldf <- fulldf %>% 
+          mutate(Rating = ordered(x = ifelse(!is.na(ProsperRating), 
+                                                    ProsperRating, 0), 
+                                  levels = 0:7, 
+                          labels = c("Q", "HR", "E", "D", "C", "B", "A", "AA")))
 
 boxplot(CreditScore ~ Rating, data = fulldf, ylim = c(600, 850))
 c(cor(as.numeric(fulldf$CreditScore), as.numeric(fulldf$Rating)), 
@@ -278,6 +283,7 @@ ggCatdefaults <- ggplot(data = catdefaultsdf,
                             color = Rating, group = Rating)) +
                  geom_line() +
                  theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+                 scale_colour_brewer(palette = "Reds") +
                  xlab("Loan Origination") +
                  ylab("Defaults (Thousands)") +
                  ggtitle("Defaults for Loans Originated through FY 2013")
@@ -305,6 +311,7 @@ ggCatdefaults <- ggplot(data = subset(catdefaultsdf, as.numeric(Results) < 2),
                         aes(x = Quarter, y = Loans, 
                             color = Rating, group = Rating)) +
                  geom_line() +
+                 scale_colour_brewer(palette = "Reds") +
                  theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) +
                  xlab("Loan Origination") +
                  ggtitle("Defaults for Loans Originated through FY 2013")
@@ -614,3 +621,4 @@ I forgot that the third leg of data science is substantive experience.  I put as
 
 To continue from here, I would really like to make a predictive model to compare against the FY 2014 data.  I could treat defaults as a binary factor and use logistic regression except that I don't know enough to extend the technique to multiple regressors that interact with each other.  I am looking forward to learning more about modeling and predictions in the Machine Learning class.
 
+After this analysis, I would consider investing in p2p loans if I was looking to add an income stream to my portfolio.  I will certainly compare their interest rates to banks and credit unions if I am ever looking for a loan.
