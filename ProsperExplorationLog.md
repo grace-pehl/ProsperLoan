@@ -26,7 +26,7 @@ choice. Historically, Prosper made their loan data public nightly, however, effe
 
 ## Univariate Plots
 
-![](ProsperExplorationLog_files/figure-html/unnamed-chunk-2-1.png) 
+![](figure/unnamed-chunk-2-1.png) 
 
 The majority of loans do not use one of the suggested categories, since the first bar of this chart is "Not Applicable" and the last bar is NA and together they account for more than half the rows of data.
 
@@ -35,15 +35,15 @@ The majority of loans do not use one of the suggested categories, since the firs
 ## stat_bin: binwidth defaulted to range/30. Use 'binwidth = x' to adjust this.
 ```
 
-![](ProsperExplorationLog_files/figure-html/unnamed-chunk-3-1.png) 
+![](figure/unnamed-chunk-3-1.png) 
 
 Credit scores range from 300 to 850.  Prosper borrower have a median score of NA, which is considered good credit.  Prosper now requires a minimum credit score of 640 for new borrowers or 600 for returning borrowers, but initially, subprime borrowers could also apply for loans.
 
-![](ProsperExplorationLog_files/figure-html/unnamed-chunk-4-1.png) 
+![](figure/unnamed-chunk-4-1.png) 
 
 The plot of income range looks very symmetric until I notice that the categories are not in the correct order.
 
-![](ProsperExplorationLog_files/figure-html/unnamed-chunk-5-1.png) 
+![](figure/unnamed-chunk-5-1.png) 
 
 Few loans are made to borrowers with incomes below $25,000.  There should be a
 similar distribution seen in the borrowers' monthly income. But the max value is 1.75 million. The maximum loan amount is only $35,000 with a 3-year term, which would not be worth the time spent applying for someone making millions a month. Actually, this loan was for $4000.
@@ -57,7 +57,7 @@ There is also a variable for IncomeRange that uses annual income.  If these colu
 ## stat_bin: binwidth defaulted to range/30. Use 'binwidth = x' to adjust this.
 ```
 
-![](ProsperExplorationLog_files/figure-html/unnamed-chunk-6-1.png) 
+![](figure/unnamed-chunk-6-1.png) 
 
 Since I don't believe wealthy people would be borrowing comparatively small amount, this means we can't cross-check the borrower's income this way and we have to be certain to only include one of these variables in any model later on.
 
@@ -66,7 +66,7 @@ Since I don't believe wealthy people would be borrowing comparatively small amou
 ## stat_bin: binwidth defaulted to range/30. Use 'binwidth = x' to adjust this.
 ```
 
-![](ProsperExplorationLog_files/figure-html/unnamed-chunk-7-1.png) 
+![](figure/unnamed-chunk-7-1.png) 
 
 ```
 ##    Min. 1st Qu.  Median    Mean 3rd Qu.    Max. 
@@ -78,11 +78,11 @@ Half of all Prosper loans are for $1000 - $6500. The most common amount requeste
 ### Timeseries
 Flipping through the [Prosper 2013 annual report](https://www.prosper.com/Downloads/Legal/prosper10k12312013.pdf), I found an Excel chart of loan originations (in dollars) by quarter on page 74 and wondered if I could recreate it in ggplot and then modify it to be more interesting.
 
-![](ProsperExplorationLog_files/figure-html/Bivariate_Plots-1.png) 
+![](figure/Bivariate_Plots-1.png) 
 
 The chart in the annual report began in the third quarter of 2009.  The period  of October 15, 2008 to July 13, 2009 is known as Prosper's [Quiet Period](http://www.lendacademy.com/a-look-back-at-the-lending-club-and-prosper-quiet-periods/) when they were required to suspend lending pending SEC approval.  When they relaunched in July 2009, there were several changes to their lending process, so I'll have to keep that in mind.
 
-![](ProsperExplorationLog_files/figure-html/unnamed-chunk-8-1.png) 
+![](figure/unnamed-chunk-8-1.png) 
 
 
 ```
@@ -96,15 +96,15 @@ The chart in the annual report began in the third quarter of 2009.  The period  
 ##                    363                    313                    304
 ```
 
-![](ProsperExplorationLog_files/figure-html/unnamed-chunk-9-1.png) 
+![](figure/unnamed-chunk-9-1.png) 
 
 Except for the colors (should do a nice red, yellow, money-green) this is a nice chart.  Default rates were high initially, but improved with the new standards implemented after the 'quiet period'.  Default rates drop in recent quarters because those loans have had less time to enter default.  Proper models defaults with curves and notes that those recent loans have default rates below expectations.
 
 Prosper divides loan requests into ProsperRating groups according to expected risk.  The higher risk the borrower is projected to be, the higher the interest rate set on the loan. OK, so to start, I want to look at the Results of the loans by ProsperRatingCategory, but since I'm comparing two factor variables, I think it makes sense to make another stacked barplot and leave it in the univariate section (though I would have considered the timeseries to be bivariate, but Wikipedia disagrees).
 
-![](ProsperExplorationLog_files/figure-html/unnamed-chunk-10-1.png) 
+![](figure/unnamed-chunk-10-1.png) 
 
-The bars are in the wrong order since AA is lower risk than A.  D has more defaults than E, but also more loans. E and HR (for High Risk) have about the same number of defaults, but E's rate is lower.  Variable definitions note that the ProsperRating was introduced in 2009, so that blank column must represent all of the pre-2009 loans, when they used something called the CreditGrade to rank borrowers.  I'm surprised the company survived the quiet period when they couldn't make new loans and over a third of their prior loans went into default.  I'd like to see how well the default rate matches with Prosper's expectations, but then I'd need Time, Results, and ProsperRating, which is definitely not univariate.
+D has more defaults than E, but also more loans. E and HR (for High Risk) have about the same number of defaults, but E's rate is lower.  Variable definitions note that the ProsperRating was introduced in 2009, so that blank column must represent all of the pre-2009 loans, when they used something called the CreditGrade to rank borrowers.  I'm surprised the company survived the quiet period when they couldn't make new loans and over a third of their prior loans went into default.  I'd like to see how well the default rate matches with Prosper's expectations, but then I'd need Time, Results, and ProsperRating, which is definitely not univariate.
 
 ## Univariate Analysis
 
@@ -135,11 +135,11 @@ The default rate does not show increasing risk that I would expect.  I plan to i
 ## Bivariate Plots Section
 ### Boxplots
 I just want to try making some boxplots.  Boxplots compare a numeric variable to a factor variable.  Well, we have a numeric version of the ProsperRating.
-![](ProsperExplorationLog_files/figure-html/unnamed-chunk-11-1.png) 
+![](figure/unnamed-chunk-11-1.png) 
 
 Well, that's the most boring thing ever.  The numeric rating is just the levels of the Categories.  Well, I can get the ordering over with by combining the two columns.  I'll just call the result Rating, since I'm tired of typing ProsperRating.  Now, what will make a nice boxplot . . . CreditScore!  We can see how the two measures compare.
 
-![](ProsperExplorationLog_files/figure-html/unnamed-chunk-12-1.png) 
+![](figure/unnamed-chunk-12-1.png) 
 
 ```
 ## [1] NA NA NA
@@ -147,34 +147,34 @@ Well, that's the most boring thing ever.  The numeric rating is just the levels 
 
 The trend is generally that higher ratings have higher credit scores, but Prosper clearly uses more than credit score, since there is a lot of overlap between the ratings.  
 
-![](ProsperExplorationLog_files/figure-html/unnamed-chunk-13-1.png) 
+![](figure/unnamed-chunk-13-1.png) 
 
 There is much less overlap in the APR (interest rate) the borrowers are assigned.
 
 ### Line graphs
 How do default rates vary across the Ratings?
 
-![](ProsperExplorationLog_files/figure-html/unnamed-chunk-14-1.png) 
+![](figure/unnamed-chunk-14-1.png) 
 
 It's hard to judge since the pre 2009 loans are all lumped together.  I could either exclude them, or try to split them along the CreditGrade variable that was in use prior to 2009.
 
-![](ProsperExplorationLog_files/figure-html/unnamed-chunk-15-1.png) 
+![](figure/unnamed-chunk-15-1.png) 
 
 This really doesn't stand out as well as I thought it would.  There are high numbers of defaults from categories D through HR.  Perhaps if it were expressed as a rate rather than absolute numbers of loans that end in default.
 
-![](ProsperExplorationLog_files/figure-html/unnamed-chunk-16-1.png) 
+![](figure/unnamed-chunk-16-1.png) 
 
 That is a lot clearer and the default rates track roughly with the risk categories.  Default rates are much higher than I would have expected.  The E and HR groups, even post-recession have 25-30% of loans default.
 
-![](ProsperExplorationLog_files/figure-html/unnamed-chunk-17-1.png) ![](ProsperExplorationLog_files/figure-html/unnamed-chunk-17-2.png) 
+![](figure/unnamed-chunk-17-1.png) ![](figure/unnamed-chunk-17-2.png) 
 
 This last plot is just based on the total original loan amount and does not reflect any payments the borrower made before going into default.  Prosper also uses a collections agency to try to recover more money from delinquent borrowers, payments received are used to pay (in order) fees, interest, and principal.  There are two variables relating to the loss from a loan.  LP_GrossPrincipalLoss is the gross charged off amount of the loan.  LP_NetPrincipalLoss the the principal that remains uncollected after any recoveries.  My interpretation of these variables is the the gross loss is the uncollected principal plus unpaid interest and fees.  So, I think that gross loss is of more concern to investors.
 
-![](ProsperExplorationLog_files/figure-html/unnamed-chunk-18-1.png) 
+![](figure/unnamed-chunk-18-1.png) 
 
 The average loss rate per dollar invested
 
-![](ProsperExplorationLog_files/figure-html/unnamed-chunk-19-1.png) 
+![](figure/unnamed-chunk-19-1.png) 
 
 I want to see what are the main factors correlate with default.  Based on this plot, I'm going to exclude everything from before July 2009 (the end of the "quiet period") and only include loans that have a ProsperRating.  I'm only going to use loans that are completed, so I will exclude LoanStatus of Current or Past Due.
 
@@ -192,7 +192,7 @@ I want to see what are the main factors correlate with default.  Based on this p
 I also made a column for the InvestorProfit and the InvestorProfitRate for each loan.  With this smaller dataset, I'm ready to look at some scatterplots.
 
 ### Scatterplots
-![](ProsperExplorationLog_files/figure-html/unnamed-chunk-21-1.png) 
+![](figure/unnamed-chunk-21-1.png) 
 
 This is not what I expected.  Why would invest in these lending sites if this was the real picture?  So what went wrong?  From [the Prosper website](https://www.prosper.com/invest/marketplace-performance/):  
 > Why do we show Seasoned Returns?
@@ -213,7 +213,7 @@ That seems to be enough to play with to see what factors affect default rate. Le
 ## geom_smooth: method="auto" and size of largest group is >=1000, so using gam with formula: y ~ s(x, bs = "cs"). Use 'method = x' to change the smoothing method.
 ```
 
-![](ProsperExplorationLog_files/figure-html/unnamed-chunk-23-1.png) 
+![](figure/unnamed-chunk-23-1.png) 
 
 Now there is an average profit for investors, though not by much for the one year loans.  There is also not much overlap between the two terms, only about six months.  They look like two different populations.  I think I'll just look at the 36 month loans.
 
@@ -222,7 +222,7 @@ Now there is an average profit for investors, though not by much for the one yea
 ## [1] 8571   13
 ```
 
-![](ProsperExplorationLog_files/figure-html/unnamed-chunk-24-1.png) 
+![](figure/unnamed-chunk-24-1.png) 
 
 Now a regression line shows profit rate to be fairly constant over this time period.
 
@@ -302,11 +302,11 @@ Now a regression line shows profit rate to be fairly constant over this time per
 ```
 
 The Result of the loan (paid or defaulted) is not really correlated with the other variables.  The highest (relevant) correlations are with BorrowerAPR (-0.22) and Rating (-0.19).  I'm surprised at the correlation between CreditScore and the loan amount (0.46).   
-![](ProsperExplorationLog_files/figure-html/unnamed-chunk-26-1.png) 
+![](figure/unnamed-chunk-26-1.png) 
 
 There is also a correlation between StatedMonthlyIncome and both  LoanOriginalAmount and RevolvingCreditBalance.
 
-![](ProsperExplorationLog_files/figure-html/unnamed-chunk-27-1.png) 
+![](figure/unnamed-chunk-27-1.png) 
 
 ## Bivariate Analysis
 
@@ -356,7 +356,7 @@ The strongest relationship among my variables was between ProsperRating and Borr
 ## F-statistic:  1389 on 3 and 8518 DF,  p-value: < 2.2e-16
 ```
 
-![](ProsperExplorationLog_files/figure-html/Multivariate_Plots-1.png) 
+![](figure/Multivariate_Plots-1.png) 
 
 This would be the start of a model for credit score.  The residuals show a clear trend indicating that the model is underfit.  None of the other variables I had selected are good candidates to be included.  If I were more interested in credit score, I could add more variables to the dataset to improve the model.  I'd like try modeling investor profit first.
 
@@ -386,11 +386,11 @@ This would be the start of a model for credit score.  The residuals show a clear
 ## F-statistic: 79.88 on 3 and 8524 DF,  p-value: < 2.2e-16
 ```
 
-![](ProsperExplorationLog_files/figure-html/unnamed-chunk-28-1.png) ![](ProsperExplorationLog_files/figure-html/unnamed-chunk-28-2.png) ![](ProsperExplorationLog_files/figure-html/unnamed-chunk-28-3.png) ![](ProsperExplorationLog_files/figure-html/unnamed-chunk-28-4.png) 
+![](figure/unnamed-chunk-28-1.png) ![](figure/unnamed-chunk-28-2.png) ![](figure/unnamed-chunk-28-3.png) ![](figure/unnamed-chunk-28-4.png) 
 
 While this model of investor profit rate includes the most promising results of the correlation analysis, it does not do a very good job of fitting the data.  I don't think a linear model is a good choice here.  InvestorProfitRate is the investors' profit on each loan divided by the original amount of the loan.  However, this process does not create a normally distributed variable.
 
-![](ProsperExplorationLog_files/figure-html/unnamed-chunk-29-1.png) 
+![](figure/unnamed-chunk-29-1.png) 
 
 I'm really looking forward to the next course on Machine Learning.  I'm hoping to really improve my understanding of modeling and predictive functions.  I found a [site](https://www.lendingharbor.com/contact/faq) where someone has modeled just this sort of data and is making money off of it.
 
@@ -402,27 +402,25 @@ I first looked at the relationship of income and available credit to credit scor
 I found it interesting that larger loan requests were associated with larger incomes and with higher credit scores.  Overall, correlations were lower than I expected. 
 
 #### OPTIONAL: Did you create any models with your dataset? Discuss the strengths and limitations of your model.
-I think it might be better to estimate a rate of defaults, but I'm not sure how to define the population that I would divide the number of defaults by.  I can calculate the percentage of defaults for each rating, but since the rating is attempting to separate loans by default risk, the reasoning seems circular.
-
-I did a little googling and discovered that this type of modeling is far beyond my experience.  [This paper](http://papers.ssrn.com/sol3/papers.cfm?abstract_id=2529240) uses something called a discrete-time hazard model to analyze defaults using Lending Club data.  Lending club is another peer-to-peer lending platform.  Developing models of default risk is very much an active area of research.
+I think it might be better to estimate a rate of defaults, but I'm not sure how to define the population that I would divide the number of defaults by.  I can calculate the percentage of defaults for each rating, but since the rating is attempting to separate loans by default risk, the reasoning seems circular.  I did a little googling and discovered that this type of modeling is far beyond my experience.  [This paper](http://papers.ssrn.com/sol3/papers.cfm?abstract_id=2529240) uses something called a discrete-time hazard model to analyze defaults using Lending Club data.  Lending club is another peer-to-peer lending platform.  Developing models of default risk is very much an active area of research.
 ------
 
 # Final Plots and Summary
 
 ### Plot One
-![](ProsperExplorationLog_files/figure-html/Plot_One-1.png) 
+![](figure/Plot_One-1.png) 
 
 ### Description One
 Prosper Loan's business history is encoded the the dollar value of the loans originated through their online marketplace.  Prosper was the first peer-to-peer lending marketplace, opening to the public February 5, 2006[[1](https://en.wikipedia.org/wiki/Prosper_Marketplace)].  Initially, lenders bid on loans by offering competing interest rates.  Prosper's business model came under scrutiny by the US Securities and Exchange Commission, who issued a "cease and desist" letter November 24, 2008.[[2](https://www.sec.gov/litigation/admin/2008/33-8984.pdf)]   In anticipation, Prosper filed for SEC registration, which required a "quiet period" from October 15, 2008 until July 13, 2009, during which time, no new loans were originated.[[3](http://www.lendacademy.com/a-look-back-at-the-lending-club-and-prosper-quiet-periods/)]  Prosper attributes the decrease in originations at the end of 2012 to a decrease in liquidity and in January of 2013 undertook an equity financing [[4](https://www.prosper.com/Downloads/Legal/prosper10k12312013.pdf), p 74].  The increase in capital was used in part for a marketing campaign to attract more borrowers and to launch IRA accounts to attract institutional lenders.
 
 ### Plot Two
-![](ProsperExplorationLog_files/figure-html/Plot_Two-1.png) 
+![](figure/Plot_Two-1.png) 
 
 ### Description Two
 In this plot, we switch from dollar amounts to number of new loans originated each quarter and the final disposition of those loans.  The early days of Prosper were marked by very loose lending standards.  Coupled with the global financial crisis, these early loans had very high default rates and many investors realized losses.  After Prosper's relaunch in 2009, minimum credit scores were increased and Prosper made more of an effort to verify borrower's information[[5](http://www.wsj.com/articles/SB120525138644627455)].  Prosper's prospectus makes it clear that investors should expect some loans to default[[6](https://www.prosper.com/invest/marketplace-performance/)], and charges interest rates high enough to account for risk, but lower than a borrower would get from a credit card.
 
 ### Plot Three
-![](ProsperExplorationLog_files/figure-html/Plot_Three-1.png) 
+![](figure/Plot_Three-1.png) 
 
 ### Description Three
 While every rating category experiences defaults, investors make money by collecting more (on average) in interest and fees than the principal lost to defaulting borrowers.  Here, principal lost, service fees, and collection fees are subtracted from the interest and (borrower) fees paid to investors.  All rating categories have generated impressive profits since 2009, with generally higher volatility in riskier categories.  This chart explains why peer-to-peer lending is such a hot topic in investing circles.  
@@ -439,3 +437,4 @@ I forgot that the third leg of data science is substantive experience.  I put as
 
 To continue from here, I would really like to make a predictive model to compare against the FY 2014 data.  I could treat defaults as a binary factor and use logistic regression except that I don't know enough to extend the technique to multiple regressors that interact with each other.  I am looking forward to learning more about modeling and predictions in the Machine Learning class.
 
+After this analysis, I would consider investing in p2p loans if I was looking to add an income stream to my portfolio.  I will certainly compare their interest rates to banks and credit unions if I am ever looking for a loan.
