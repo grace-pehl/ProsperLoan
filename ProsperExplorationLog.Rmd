@@ -94,7 +94,7 @@ The majority of loans do not use one of the suggested categories, since the firs
 qplot(CreditScore, data = fulldf, xlim = c(300, 850))
 ```
 
-Credit scores range from 300 to 850.  Prosper borrower have a median score of 690, which is considered good credit.  Prosper now requires a minimum credit score of 640 for new borrowers or 600 for returning borrowers, but initially, subprime borrowers could also apply for loans.
+Credit scores range from 300 to 850.  Prosper borrower have a median score of `r median(fulldf$CreditScore)`, which is considered good credit.  Prosper now requires a minimum credit score of 640 for new borrowers or 600 for returning borrowers, but initially, subprime borrowers could also apply for loans.
 
 ```{r}
 qplot(IncomeRange, data = fulldf)
@@ -195,9 +195,9 @@ ggDefaults <- ggplot(defaultsdf, aes(x = Quarter, y = Loans, fill = Results)) +
 ggDefaults
 ```
 
-Except for the colors (should do a nice red, yellow, money-green) this is a nice chart.  Default rates were high initially, but improved with the new standards implemented after the 'quiet period'.  Defaut rates drop in recent quarters because those loans have had less time to enter default.  Proper models defaults with curves and notes that those recent loans have default rates below expectations.
+Except for the colors (should do a nice red, yellow, money-green) this is a nice chart.  Default rates were high initially, but improved with the new standards implemented after the 'quiet period'.  Default rates drop in recent quarters because those loans have had less time to enter default.  Proper models defaults with curves and notes that those recent loans have default rates below expectations.
 
-Prosper divides loan requests into ProsperRating groups according to expected risk.  The higher risk the borrower is projected to be, the higher the interest rate set on the loan. OK, so to start, I want to look at the Results of the loans by ProsperRatingCategory, but since I'm comparing two factor variables, I think it makes sense to make another stacked barplot and leave it in the univariate section (though I would have considered the timeseries to be bivariate, but wikipedia disagrees).
+Prosper divides loan requests into ProsperRating groups according to expected risk.  The higher risk the borrower is projected to be, the higher the interest rate set on the loan. OK, so to start, I want to look at the Results of the loans by ProsperRatingCategory, but since I'm comparing two factor variables, I think it makes sense to make another stacked barplot and leave it in the univariate section (though I would have considered the timeseries to be bivariate, but Wikipedia disagrees).
 
 ```{r}
 defaultersdf <- fulldf %>% group_by(ProsperRatingCategory, Results) %>%
@@ -237,7 +237,7 @@ I created a single CreditScore by averaging the CreditScoreRangeUpper and Credit
 
 StatedMonthlyIncome had a very long tail that included values that don't make sense given the size and term of Prosper loans. It seems like the large values are user-entered errors because the other values make logical sense.  The rows with StatedIncomeRange > 25000 should be excluded from any analysis that involves StatedMonthlyIncome or IncomeRange (which I learned was calculated from the StatedMonthlyIncome).
 
-The default rate does not show increasing risk that I would expect.  I plan to investigate the ProsperRatingGroups further.
+The default rate does not show increasing risk that I would expect.  I plan to investigate the ProsperRating groups further.
 
 ## Bivariate Plots Section
 ### Boxplots
@@ -252,7 +252,9 @@ Well, that's the most boring thing ever.  The numeric rating is just the levels 
 fulldf <- fulldf %>% mutate(Rating = ordered(x = ifelse(!is.na(ProsperRating), ProsperRating, 0), levels = 0:7, labels = c("Q", "HR", "E", "D", "C", "B", "A", "AA")))
 
 boxplot(CreditScore ~ Rating, data = fulldf, ylim = c(600, 850))
-c(cor(as.numeric(fulldf$CreditScore), as.numeric(fulldf$Rating)), cor(fulldf$CreditScore, fulldf$ProsperScore), cor(fulldf$CreditScore, as.numeric(fulldf$CreditGrade)))
+c(cor(as.numeric(fulldf$CreditScore), as.numeric(fulldf$Rating)), 
+  cor(fulldf$CreditScore, fulldf$ProsperScore), 
+  cor(fulldf$CreditScore, as.numeric(fulldf$CreditGrade)))
 ```
 
 The trend is generally that higher ratings have higher credit scores, but Prosper clearly uses more than credit score, since there is a lot of overlap between the ratings.  
@@ -285,9 +287,16 @@ ggCatdefaults
 It's hard to judge since the pre 2009 loans are all lumped together.  I could either exclude them, or try to split them along the CreditGrade variable that was in use prior to 2009.
 
 ```{r}
-fulldf$ProsperRating <- ordered(fulldf$ProsperRating, labels = c("HR", "E", "D", "C", "B", "A", "AA"))
-fulldf <- fulldf %>% mutate(Rating = ordered(ifelse(!is.na(ProsperRating), as.character(ProsperRating), as.character(CreditGrade))))
-
+fulldf$ProsperRating <- ordered(fulldf$ProsperRating, 
+                        labels = rev(c("HR", "E", "D", "C", "B", "A", "AA")))
+ratinglevels <- rev(c("HR", "E", "D", "C", "B", "A", "AA"))
+fulldf <- fulldf %>% 
+          mutate(Rating = ifelse(ProsperRating %in% ratinglevels, 
+                                 as.character(ProsperRating), 
+                                 ifelse(CreditGrade %in% ratinglevels,
+                                        as.character(CreditGrade),
+                                        NA)))
+fulldf$Rating <- ordered(fulldf$Rating, labels = ratinglevels)
 catdefaultsdf <- fulldf %>% 
                  group_by(Quarter = LoanOriginationQuarter, Rating, Results) %>%
                  summarize(Loans = n())
@@ -356,7 +365,7 @@ ggLossCatTime <- ggplot(data = arrange(fulldf, Results),
                  aes(x = LoanOriginationQuarter, 
                      y = LP_GrossPrincipalLoss / LoanOriginalAmount)) +
                  geom_bar(stat = "summary", fun.y = mean) +
-                 facet_wrap(~ Rating)
+                 facet_wrap(~Rating)
 ggLossCatTime
 ```
 
@@ -387,8 +396,9 @@ I also made a column for the InvestorProfit and the InvestorProfitRate for each 
 
 ### Scatterplots
 ```{r}
-ggplot(loans, aes(LoanOriginationDate, InvestorProfit)) +  geom_point(aes(color = Results), alpha = 0.05) + 
-geom_smooth(stat = 'summary', fun.y = mean)
+ggplot(loans, aes(LoanOriginationDate, InvestorProfit)) +  
+    geom_point(aes(color = Results), alpha = 0.05) + 
+    geom_smooth(stat = 'summary', fun.y = mean)
 ```
 
 This is not what I expected.  Why would invest in these lending sites if this was the real picture?  So what went wrong?  From [the Prosper website](https://www.prosper.com/invest/marketplace-performance/):  
@@ -396,20 +406,22 @@ This is not what I expected.  Why would invest in these lending sites if this wa
 As a Prosper investor, your return is based on the lifecycle of the underlying Notes within your portfolio. Because a Note cannot default until it's missed five payments, the return for a portfolio composed solely of young notes will be based entirely on those loans that remain current. This can result in a temporarily higher return for young portfolios than should be expected.
 As your Notes age, you may see initial defaults occur between their fifth and ninth months of age. Our research shows that Prosper Note returns historically have shown increased stability after they've reached ten months of age. For that reason, we provide "Actual Seasoned Returns", defined as the Actual Return for Notes aged 10 months or more.
 
-This dataset was saved March 2014, so Prosper would exclude notes after May 2013, which would eliminate the recent losses. Maybe I'm introduing bias by excluding current loans.  While Prosper does not have a prepayment penalty, I would expect most loans that end before their term is up to have defaulted.  Prosper loans have 1, 3, or 5 year terms, so that's March 2013, March 2011, and March 2009 (which is prior to the start of new lending terms). I had excluded current loans, becuase the investor has not earned back his investment and has a paper loss, that may become a profit with time.  If I subset out only the loans past their term, how many does that leave?  
+This dataset was saved March 2014, so Prosper would exclude notes after May 2013, which would eliminate the recent losses. Maybe I'm introducing bias by excluding current loans.  While Prosper does not have a prepayment penalty, I would expect most loans that end before their term is up to have defaulted.  Prosper loans have 1, 3, or 5 year terms, so that's March 2013, March 2011, and March 2009 (which is prior to the start of new lending terms). I had excluded current loans, because the investor has not earned back his investment and has a paper loss, that may become a profit with time.  If I subset out only the loans past their term, how many does that leave?  
 
 ```{r}
 loans2 <- loans %>% 
           filter((LoanOriginationDate < ymd("2013-03-11") & Term <= 12) |
-                 (LoanOriginationDate < ymd("2011-03-11") & Term <= 36)) %>%           droplevels()
+                 (LoanOriginationDate < ymd("2011-03-11") & Term <= 36)) %>%           
+          droplevels()
 dim(loans2)
 ```
 
 That seems to be enough to play with to see what factors affect default rate. Let's try the Profit/Origination Plot again.
 
 ```{r}
-ggplot(loans2, aes(LoanOriginationDate, InvestorProfitRate)) +  geom_point(aes(color = factor(Term)), alpha = 0.3) + 
-geom_smooth()
+ggplot(loans2, aes(LoanOriginationDate, InvestorProfitRate)) +  
+    geom_point(aes(color = factor(Term)), alpha = 0.3) + 
+    geom_smooth()
 ```
 
 Now there is an average profit for investors, though not by much for the one year loans.  There is also not much overlap between the two terms, only about six months.  They look like two different populations.  I think I'll just look at the 36 month loans.
@@ -419,14 +431,16 @@ loans2 <- loans2 %>%
           filter(Term == 36) %>%
           select(-Term)
 dim(loans2)
-ggplot(loans2, aes(LoanOriginationDate, InvestorProfitRate)) +  geom_point(alpha = 0.3) + 
-geom_smooth(method = lm)
+ggplot(loans2, aes(LoanOriginationDate, InvestorProfitRate)) +  
+    geom_point(alpha = 0.3) + 
+    geom_smooth(method = lm)
 ```
 
-Now a regression line shows profit rate to be fairly constant over this timeperiod.
+Now a regression line shows profit rate to be fairly constant over this time period.
 
 ### Correlations
 ```{r}
+# given any column, calculate correlations with all variables in the dataframe
 corlist <- function(df, column) {
     m <- c()
     for (col in names(df)) {
@@ -436,16 +450,18 @@ corlist <- function(df, column) {
                         error = function(e)NA)
         m <- append(m, foo)
     }
-    names(m) <- names(df)
+    names(m) <- names(df) # assign row names
     m
 }
+# calculate correlations between all values in a dataframe
+# (could not use cor(dataframe) becasue it does not coerce to numeric)
 cortable <- function(df){
     m <- c()
     for (col in names(df)) {
         m <- cbind(m, suppressWarnings(corlist(df, col)))
     }    
     m <- data.frame(m)
-    names(m) <- names(df)
+    names(m) <- names(df) # assign column names
     m
 }
 cortable(loans2)
@@ -484,7 +500,7 @@ StatedMonthlyIncome and CreditScore were both positively correlated with the loa
 
 #### What was the strongest relationship you found?
 
-The strongest relationship amoung my variables was between ProsperRating and BorrowerAPR (0.9).  The ProsperRating is based mostly on CreditScore (correlation = 0.7).   
+The strongest relationship among my variables was between ProsperRating and BorrowerAPR (0.9).  The ProsperRating is based mostly on CreditScore (correlation = 0.7).   
 
 ## Multivariate Plots Section
 
@@ -497,7 +513,7 @@ par(mfrow = c(2,2))
 plot(fitcs)
 ```
 
-This would be the start of a model for credit score.  The residuals show a clear trend indicating that the model is underfit.  None of the other variables I had selected are good candidates to be included.  If I were interested in credit score, I could add more variables to the dataset to improve the model.  I'd like try modeling investor profit first.
+This would be the start of a model for credit score.  The residuals show a clear trend indicating that the model is underfit.  None of the other variables I had selected are good candidates to be included.  If I were more interested in credit score, I could add more variables to the dataset to improve the model.  I'd like try modeling investor profit first.
 
 ```{r}
 fitip <- lm(InvestorProfitRate ~ BorrowerAPR + LoanOriginalAmount + 
@@ -513,65 +529,88 @@ par(mfrow = c(1,1))
 hist(loans2$InvestorProfitRate)
 ```
 
+I'm really looking forward to the next course on Machine Learning.  I'm hoping to really improve my understanding of modeling and predictive functions.  I found a [site](https://www.lendingharbor.com/contact/faq) where someone has modeled just this sort of data and is making money off of it.
+
 ## Multivariate Analysis
 #### Talk about some of the relationships you observed in this part of the investigation. Were there features that strengthened each other in terms of looking at your feature(s) of interest?
-I first looked at the relationship of income and available credit to credit score.  These two values are enough to explain a third of the credit score value once I included an interaction term.  This interesting because credit scores are not based on income.  The plot of residuals indicates that more variagles need to be included in the model.
+I first looked at the relationship of income and available credit to credit score.  These two values are enough to explain a third of the credit score value once I included an interaction term.  This interesting because credit scores are not based on income.  The plot of residuals indicates that more variables need to be included in the model.
 
 #### Were there any interesting or surprising interactions between features?
 I found it interesting that larger loan requests were associated with larger incomes and with higher credit scores.  Overall, correlations were lower than I expected. 
 
 #### OPTIONAL: Did you create any models with your dataset? Discuss the strengths and limitations of your model.
-I think it might be better to estimate a rate of defaults, but I'm not sure how to define the population that I would divide the number of defaults by.  I can calulate the percentage of defaults for each rating, but since the rating is attempting to separate loans by default risk, the reasoning seems circular.
+I think it might be better to estimate a rate of defaults, but I'm not sure how to define the population that I would divide the number of defaults by.  I can calculate the percentage of defaults for each rating, but since the rating is attempting to separate loans by default risk, the reasoning seems circular.
 
-I did a little googling and discovered that this type of modeling is far beyond my experience.  [This paper](http://papers.ssrn.com/sol3/papers.cfm?abstract_id=2529240) uses somthing called a discrete-time hazard model to analyze defaults using Lending Club data.  Lending club is another peer-to-peer lending platform.  Developing models of default risk is very much an active area of research.
+I did a little googling and discovered that this type of modeling is far beyond my experience.  [This paper](http://papers.ssrn.com/sol3/papers.cfm?abstract_id=2529240) uses something called a discrete-time hazard model to analyze defaults using Lending Club data.  Lending club is another peer-to-peer lending platform.  Developing models of default risk is very much an active area of research.
 ------
 
 # Final Plots and Summary
 
 ### Plot One
 ```{r echo=FALSE, Plot_One}
-Plot1df <- fulldf %>% 
-           select(Quarter = LoanOriginationQuarter,
-                  Amount = LoanOriginalAmount) %>%
-           group_by(Quarter) %>%
-           summarise(Loans = n()/ 10 ^ 3, 
-                     Dollars = sum(Amount)/ 10 ^ 6) %>%
-           arrange(Quarter) %>%
-           filter(Quarter >= "2006" & Quarter < "2014")
-
-Plot1 <- ggplot(Plot1df, aes(x = Quarter, y = Dollars)) +
-         geom_bar(stat = "identity", fill = "green4") +
-         geom_text(aes(label = round(Dollars, 0)), vjust = -0.5, size = 4) +
-         theme(axis.text.x = element_text(angle = 90, vjust = 0.5),
-               axis.title.x = element_blank()) +
-         ylab("Loan Originations (million USD)") +
+plot1 <- ggOriginationDollars + ylab("Loan Originations (million USD)") +
          ggtitle("Prosper Loan Marketplace History through FY 2013")
-Plot1
+plot1
 ```
 
 ### Description One
-Prosper Loan's business history is encoded the the dollar value of the loans originated through their online marketplace.  Prosper was the first peer-to-peer lending marketplace, opening to the public February 5, 2006[1](https://en.wikipedia.org/wiki/Prosper_Marketplace).  Initially, lenders bid on loans by offering competing interest rates.  Prosper's business model came under scrutiny by the US Securities and Exchange Commission, who issued a "cease and desist" letter November 24, 2008.[2](https://www.sec.gov/litigation/admin/2008/33-8984.pdf)   In anticipation, Prosper filed for SEC registration, which required a "quiet period" from October 15, 2008 until July 13, 2009, during which time, no new loans were originated.[3](http://www.lendacademy.com/a-look-back-at-the-lending-club-and-prosper-quiet-periods/)
+Prosper Loan's business history is encoded the the dollar value of the loans originated through their online marketplace.  Prosper was the first peer-to-peer lending marketplace, opening to the public February 5, 2006[[1](https://en.wikipedia.org/wiki/Prosper_Marketplace)].  Initially, lenders bid on loans by offering competing interest rates.  Prosper's business model came under scrutiny by the US Securities and Exchange Commission, who issued a "cease and desist" letter November 24, 2008.[[2](https://www.sec.gov/litigation/admin/2008/33-8984.pdf)]   In anticipation, Prosper filed for SEC registration, which required a "quiet period" from October 15, 2008 until July 13, 2009, during which time, no new loans were originated.[[3](http://www.lendacademy.com/a-look-back-at-the-lending-club-and-prosper-quiet-periods/)]  Prosper attributes the decrease in originations at the end of 2012 to a decrease in liquidity and in January of 2013 undertook an equity financing [[4](https://www.prosper.com/Downloads/Legal/prosper10k12312013.pdf), p 74].  The increase in capital was used in part for a marketing campaign to attract more borrowers and to launch IRA accounts to attract institutional lenders.
 
-Prosper explains the decrease in originations
-
-https://www.prosper.com/loans/rates-and-fees/
-https://www.prosper.com/invest/marketplace-performance/
-https://www.lendingharbor.com/contact/faq
 ### Plot Two
 ```{r echo=FALSE, Plot_Two}
-ggDefaults
+plot2 <- ggDefaults + ylab("Number of Loan Originations (Thousands)") +
+         scale_fill_manual(values = c("Defaulted" = "red3",
+                                       "Past Due" = "yellow", 
+                                       "Current or Paid" = "green4"))
+plot2
 ```
 
 ### Description Two
-
+In this plot, we switch from dollar amounts to number of new loans originated each quarter and the final disposition of those loans.  The early days of Prosper were marked by very loose lending standards.  Coupled with the global financial crisis, these early loans had very high default rates and many investors realized losses.  After Prosper's relaunch in 2009, minimum credit scores were increased and Prosper made more of an effort to verify borrower's information[[5](http://www.wsj.com/articles/SB120525138644627455)].  Prosper's prospectus makes it clear that investors should expect some loans to default[[6](https://www.prosper.com/invest/marketplace-performance/)], and charges interest rates high enough to account for risk, but lower than a borrower would get from a credit card.
 
 ### Plot Three
-```{r echo=FALSE, Plot_Three}
-ggCatRateDefault
+```{r echo=FALSE, message=FALSE, Plot_Three}
+plot3a <- ggplot(data = filter(fulldf, Rating != "NA") %>% droplevels(), 
+                 aes(x = LoanOriginationQuarter, y = BorrowerAPR)) +
+          facet_grid(~Rating) +
+          geom_line(aes(y = 100 * LP_GrossPrincipalLoss / LoanOriginalAmount, 
+                        group = 1),
+                    stat = "summary", fun.y = mean, lwd = 1) +
+          geom_line(aes(y = 100 * LP_InterestandFees / LoanOriginalAmount, 
+                        group = 1), 
+                    stat = "summary", fun.y = mean, color = "green4", lwd = 1) +
+          theme(axis.ticks = element_blank(), axis.text.x = element_blank(),
+                axis.title.x = element_blank()) +
+          ylab("Percentage of Origination Dollars") +
+          ggtitle("Principal Lost (black) v. Interest and Fees Collected (green)")
+plot3b <- ggplot(data = filter(fulldf, Rating != "NA") %>% droplevels(),
+                 aes(x = LoanOriginationQuarter, 
+                     y = 100* (LP_InterestandFees - LP_GrossPrincipalLoss -
+                               LP_ServiceFees - LP_CollectionFees) /
+                         LoanOriginalAmount, 
+                     group = 1)) +
+          geom_line(stat = "summary", fun.y = mean, lwd = 1) +
+          geom_hline(y = 0, color = "red3") +
+          facet_grid(~Rating) +
+          theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(),
+                axis.title.x = element_blank()) +
+          ylab("Percentage") +
+          ggtitle("Return on Investment (ROI) After Fees")
+grid.arrange(plot3a, plot3b, nrow = 2)
 ```
 
 ### Description Three
-
+While every rating category experiences defaults, investors make money by collecting more (on average) in interest and fees than the principal lost to defaulting borrowers.  Here, principal lost, service fees, and collection fees are subtracted from the interest and (borrower) fees paid to investors.  All rating categories have generated impressive profits since 2009, with generally higher volatility in riskier categories.  This chart explains why peer-to-peer lending is such a hot topic in investing circles.  
 ------
 
 # Reflection
+I came into this project expecting it to be easy since I had already learned R and covered EDA as part of the Coursera Data Science Specialization that I'm working on concurrently.  Always aiming to be Udacious, I selected the most difficult looking dataset and confidently predicted that I'd be done in a week.  Instead, this project has taught me some deep lessons about data science.
+
+I tried to begin by selecting 10-14 important variables from the list and planned to create a series of histograms, scatterplots, and multivariate figures.  However, the analysis was adrift.  I was creating a series of simple plots, but they were not telling a coherent story.  I found I could display the same variables multiple ways, but had no way to chose between them.  Should I show a histogram of counts?  of summed values? of percentages? changes over time?  and that was just the first column. What about outliers? factor levels? transformations.  The first week had disappeared and I had gotten nowhere.
+
+I realized that unlike the other analyses I had done in R, this project did not come with a question to answer.  But there are a lot of possible questions that could be addressed by this sort of data.  I tried to pretend that I was the different types of stake holders and ask questions of the data from their point of view.  This approach got farther, but was extremely frustrating.  The truth was that I didn't know what I was doing.
+
+I forgot that the third leg of data science is substantive experience.  I put aside the Rmd file and started doing research.  I read all of Prosper's website and their annual report.  I learned about peer-to-peer lending and read what investors, borrowers, and financial gurus had to say about it.  I read about the history of the company, its accomplishments and struggles.  And it started to tell a coherent story.  The variable list made a lot more sense, and I could see what information wasn't included for public release. At last, I can explore. I chose these three plots because together they tell the history of Prosper Loan and how it works.  
+
+To continue from here, I would really like to make a predictive model to compare against the FY 2014 data.  I could treat defaults as a binary factor and use logistic regression except that I don't know enough to extend the technique to multiple regressors that interact with each other.  I am looking forward to learning more about modeling and predictions in the Machine Learning class.
+
