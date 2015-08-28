@@ -108,6 +108,7 @@ The plot of income range looks very symmetric until I notice that the categories
 fulldf$IncomeRange <- ordered(fulldf$IncomeRange, levels = c("Not displayed",
                      "Not employed", "$0", "$1-24,999", "$25,000-49,999", 
                       "$50,000-74,999", "$75,000-99,999", "$100,000+"))
+
 qplot(IncomeRange, data = fulldf) + 
     theme(axis.text.x = element_text(angle = 90))
 ```
