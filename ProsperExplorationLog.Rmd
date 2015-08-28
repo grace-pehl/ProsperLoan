@@ -546,9 +546,7 @@ I first looked at the relationship of income and available credit to credit scor
 I found it interesting that larger loan requests were associated with larger incomes and with higher credit scores.  Overall, correlations were lower than I expected. 
 
 #### OPTIONAL: Did you create any models with your dataset? Discuss the strengths and limitations of your model.
-I think it might be better to estimate a rate of defaults, but I'm not sure how to define the population that I would divide the number of defaults by.  I can calculate the percentage of defaults for each rating, but since the rating is attempting to separate loans by default risk, the reasoning seems circular.
-
-I did a little googling and discovered that this type of modeling is far beyond my experience.  [This paper](http://papers.ssrn.com/sol3/papers.cfm?abstract_id=2529240) uses something called a discrete-time hazard model to analyze defaults using Lending Club data.  Lending club is another peer-to-peer lending platform.  Developing models of default risk is very much an active area of research.
+I think it might be better to estimate a rate of defaults, but I'm not sure how to define the population that I would divide the number of defaults by.  I can calculate the percentage of defaults for each rating, but since the rating is attempting to separate loans by default risk, the reasoning seems circular.  I did a little googling and discovered that this type of modeling is far beyond my experience.  [This paper](http://papers.ssrn.com/sol3/papers.cfm?abstract_id=2529240) uses something called a discrete-time hazard model to analyze defaults using Lending Club data.  Lending club is another peer-to-peer lending platform.  Developing models of default risk is very much an active area of research.
 ------
 
 # Final Plots and Summary
