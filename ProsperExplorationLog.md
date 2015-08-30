@@ -14,9 +14,7 @@ choice. Historically, Prosper made their loan data public nightly, however, effe
 ## Exploring the Dataset
 
 
-```
-## [1] 113937     82
-```
+The dimensions of the dataset are 113937, 82
 
 ### Problems with the structure of some variables.
 
@@ -29,11 +27,6 @@ choice. Historically, Prosper made their loan data public nightly, however, effe
 ![](figure/unnamed-chunk-2-1.png) 
 
 The majority of loans do not use one of the suggested categories, since the first bar of this chart is "Not Applicable" and the last bar is NA and together they account for more than half the rows of data.
-
-
-```
-## stat_bin: binwidth defaulted to range/30. Use 'binwidth = x' to adjust this.
-```
 
 ![](figure/unnamed-chunk-3-1.png) 
 
@@ -52,19 +45,9 @@ In fact, there are 530 loans with stated monthly income greater than $25,000. Pl
 
 There is also a variable for IncomeRange that uses annual income.  If these columns are independent (ie one from the credit report and one from the borrower's application), then IncomeRange should roughly equal StatedMonthlyIncome for these rows.  If IncomeRange is calculated from the borrower's StatedMonthlyIncome, then all of these rows would be in the $100,000+ category, which is the case in the following plot.
 
-
-```
-## stat_bin: binwidth defaulted to range/30. Use 'binwidth = x' to adjust this.
-```
-
 ![](figure/unnamed-chunk-6-1.png) 
 
-Since I don't believe wealthy people would be borrowing comparatively small amount, this means we can't cross-check the borrower's income this way and we have to be certain to only include one of these variables in any model later on.
-
-
-```
-## stat_bin: binwidth defaulted to range/30. Use 'binwidth = x' to adjust this.
-```
+Since I don't believe wealthy people would be borrowing such comparatively small amounts, this means we can't cross-check the borrower's income this way and we have to be certain to only include one of these variables in any model later on.
 
 ![](figure/unnamed-chunk-7-1.png) 
 
@@ -135,15 +118,12 @@ The default rate does not show increasing risk that I would expect.  I plan to i
 ## Bivariate Plots Section
 ### Boxplots
 I just want to try making some boxplots.  Boxplots compare a numeric variable to a factor variable.  Well, we have a numeric version of the ProsperRating.
+
 ![](figure/unnamed-chunk-11-1.png) 
 
-Well, that's the most boring thing ever.  The numeric rating is just the levels of the Categories.  Well, I can get the ordering over with by combining the two columns.  I'll just call the result Rating, since I'm tired of typing ProsperRating.  Now, what will make a nice boxplot . . . CreditScore!  We can see how the two measures compare.
+Well, that's the most boring thing ever.  The numeric rating is just the levels of the Categories.  Well, I can get the ordering over with by combining the two columns.  I'll just call the result Rating, since I'm tired of typing ProsperRating.  Now, what will make a nice boxplot . . . CreditScore!  We can then see how the two measures compare.
 
 ![](figure/unnamed-chunk-12-1.png) 
-
-```
-## [1] NA NA NA
-```
 
 The trend is generally that higher ratings have higher credit scores, but Prosper clearly uses more than credit score, since there is a lot of overlap between the ratings.  
 
@@ -179,7 +159,15 @@ The average loss rate per dollar invested
 I want to see what are the main factors correlate with default.  Based on this plot, I'm going to exclude everything from before July 2009 (the end of the "quiet period") and only include loans that have a ProsperRating.  I'm only going to use loans that are completed, so I will exclude LoanStatus of Current or Past Due.
 
 ```
+## [1] "Dimensions of new dataset"
+```
+
+```
 ## [1] 26210    14
+```
+
+```
+## [1] "Loan results by rating"
 ```
 
 ```
@@ -208,14 +196,9 @@ This dataset was saved March 2014, so Prosper would exclude notes after May 2013
 
 That seems to be enough to play with to see what factors affect default rate. Let's try the Profit/Origination Plot again.
 
-
-```
-## geom_smooth: method="auto" and size of largest group is >=1000, so using gam with formula: y ~ s(x, bs = "cs"). Use 'method = x' to change the smoothing method.
-```
-
 ![](figure/unnamed-chunk-23-1.png) 
 
-Now there is an average profit for investors, though not by much for the one year loans.  There is also not much overlap between the two terms, only about six months.  They look like two different populations.  I think I'll just look at the 36 month loans.
+Now there is an average profit for investors, though not by much for the one year loans.  There is also not much overlap between the two terms, only about six months.  They look like two different populations.  I think I'll just look at the 36 month loans.  How many are there?
 
 
 ```
@@ -386,7 +369,7 @@ This would be the start of a model for credit score.  The residuals show a clear
 ## F-statistic: 79.88 on 3 and 8524 DF,  p-value: < 2.2e-16
 ```
 
-![](figure/unnamed-chunk-28-1.png) ![](figure/unnamed-chunk-28-2.png) ![](figure/unnamed-chunk-28-3.png) ![](figure/unnamed-chunk-28-4.png) 
+![](figure/unnamed-chunk-28-1.png) 
 
 While this model of investor profit rate includes the most promising results of the correlation analysis, it does not do a very good job of fitting the data.  I don't think a linear model is a good choice here.  InvestorProfitRate is the investors' profit on each loan divided by the original amount of the loan.  However, this process does not create a normally distributed variable.
 
@@ -395,15 +378,15 @@ While this model of investor profit rate includes the most promising results of 
 I'm really looking forward to the next course on Machine Learning.  I'm hoping to really improve my understanding of modeling and predictive functions.  I found a [site](https://www.lendingharbor.com/contact/faq) where someone has modeled just this sort of data and is making money off of it.
 
 ## Multivariate Analysis
-#### Talk about some of the relationships you observed in this part of the investigation. Were there features that strengthened each other in terms of looking at your feature(s) of interest?
+#### Talk about some of the relationships you observed in this part of the investigation. Were there features that strengthened each other in terms of looking at your feature(s) of interest?  
 I first looked at the relationship of income and available credit to credit score.  These two values are enough to explain a third of the credit score value once I included an interaction term.  This interesting because credit scores are not based on income.  The plot of residuals indicates that more variables need to be included in the model.
 
-#### Were there any interesting or surprising interactions between features?
+#### Were there any interesting or surprising interactions between features?  
 I found it interesting that larger loan requests were associated with larger incomes and with higher credit scores.  Overall, correlations were lower than I expected. 
 
-#### OPTIONAL: Did you create any models with your dataset? Discuss the strengths and limitations of your model.
+#### OPTIONAL: Did you create any models with your dataset? Discuss the strengths and limitations of your model.  
+
 I think it might be better to estimate a rate of defaults, but I'm not sure how to define the population that I would divide the number of defaults by.  I can calculate the percentage of defaults for each rating, but since the rating is attempting to separate loans by default risk, the reasoning seems circular.  I did a little googling and discovered that this type of modeling is far beyond my experience.  [This paper](http://papers.ssrn.com/sol3/papers.cfm?abstract_id=2529240) uses something called a discrete-time hazard model to analyze defaults using Lending Club data.  Lending club is another peer-to-peer lending platform.  Developing models of default risk is very much an active area of research.
-------
 
 # Final Plots and Summary
 
@@ -424,7 +407,6 @@ In this plot, we switch from dollar amounts to number of new loans originated ea
 
 ### Description Three
 While every rating category experiences defaults, investors make money by collecting more (on average) in interest and fees than the principal lost to defaulting borrowers.  Here, principal lost, service fees, and collection fees are subtracted from the interest and (borrower) fees paid to investors.  All rating categories have generated impressive profits since 2009, with generally higher volatility in riskier categories.  This chart explains why peer-to-peer lending is such a hot topic in investing circles.  
-------
 
 # Reflection
 I came into this project expecting it to be easy since I had already learned R and covered EDA as part of the Coursera Data Science Specialization that I'm working on concurrently.  Always aiming to be Udacious, I selected the most difficult looking dataset and confidently predicted that I'd be done in a week.  Instead, this project has taught me some deep lessons about data science.

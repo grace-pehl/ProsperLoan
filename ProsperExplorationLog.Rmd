@@ -73,8 +73,8 @@ if (!exists("fulldf")) {
               mutate(CreditScore = CreditScoreRangeLower * 0.5 + 
                                    CreditScoreRangeUpper * 0.5)
 }
-dim(fulldf)
 ```
+The dimensions of the dataset are `r dim(fulldf)`
 
 ### Problems with the structure of some variables.
 
@@ -86,20 +86,21 @@ dim(fulldf)
 
 ```{r}
 qplot(ListingCategory, data = fulldf) + 
-    theme(axis.text.x = element_text(angle = 90))
+    theme(axis.text.x = element_text(angle = -90))
 ```
 
 The majority of loans do not use one of the suggested categories, since the first bar of this chart is "Not Applicable" and the last bar is NA and together they account for more than half the rows of data.
 
 ```{r}
-qplot(CreditScore, data = fulldf, xlim = c(300, 850))
+x <- qplot(CreditScore, data = fulldf, xlim = c(300, 850))
+suppressMessages(print(x))
 ```
 
 Credit scores range from 300 to 850.  Prosper borrower have a median score of `r median(fulldf$CreditScore)`, which is considered good credit.  Prosper now requires a minimum credit score of 640 for new borrowers or 600 for returning borrowers, but initially, subprime borrowers could also apply for loans.
 
 ```{r}
 qplot(IncomeRange, data = fulldf) + 
-    theme(axis.text.x = element_text(angle = 90))
+    theme(axis.text.x = element_text(angle = -90))
 ```
 
 The plot of income range looks very symmetric until I notice that the categories are not in the correct order.
@@ -110,7 +111,7 @@ fulldf$IncomeRange <- ordered(fulldf$IncomeRange, levels = c("Not displayed",
                       "$50,000-74,999", "$75,000-99,999", "$100,000+"))
 
 qplot(IncomeRange, data = fulldf) + 
-    theme(axis.text.x = element_text(angle = 90))
+    theme(axis.text.x = element_text(angle = -90))
 ```
 
 Few loans are made to borrowers with incomes below $25,000.  There should be a
@@ -123,14 +124,16 @@ There is also a variable for IncomeRange that uses annual income.  If these colu
 ```{r}
 x <- fulldf %>% filter(StatedMonthlyIncome > 25000)
 g <- qplot(LoanOriginalAmount, data = x)
-g1 <- qplot(IncomeRange, data = x)
-grid.arrange(g, g1, nrow = 1)
+g1 <- qplot(IncomeRange, data = x) + 
+      theme(axis.text.x = element_text(angle = -90))
+suppressMessages(grid.arrange(g, g1, nrow = 1))
 ```
 
-Since I don't believe wealthy people would be borrowing comparatively small amount, this means we can't cross-check the borrower's income this way and we have to be certain to only include one of these variables in any model later on.
+Since I don't believe wealthy people would be borrowing such comparatively small amounts, this means we can't cross-check the borrower's income this way and we have to be certain to only include one of these variables in any model later on.
 
 ```{r}
-qplot(LoanOriginalAmount, data = fulldf)
+x <- qplot(LoanOriginalAmount, data = fulldf)
+suppressMessages(print(x))
 summary(fulldf$LoanOriginalAmount)
 ```
 
@@ -154,7 +157,7 @@ originationdf <- fulldf %>%
 ggOriginationDollars <- ggplot(originationdf, aes(x = Quarter, y = Dollars)) +
     geom_bar(stat = "identity", fill = "green4") +
     geom_text(aes(label = round(Dollars, 0)), vjust = -0.5, size = 4) +
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5),
+    theme(axis.text.x = element_text(angle = -90, vjust = 0.5),
           axis.title.x = element_blank()) +
     ylab("Dollar Originations (millions)") +
     ggtitle("Quarterly Dollar Originations through FY 2013")
@@ -167,7 +170,7 @@ The chart in the annual report began in the third quarter of 2009.  The period  
 # plot of number of originations v time
 ggOriginations <- ggplot(originationdf, aes(x = Quarter, y = Loans)) +
     geom_bar(stat = "identity", fill = "orchid4") +
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5),
+    theme(axis.text.x = element_text(angle = -90, vjust = 0.5),
           axis.title.x = element_blank()) +
     ylab("Originations (Thousands)") +
     ggtitle("Quarterly Loan Originations through FY 2013")
@@ -192,7 +195,7 @@ defaultsdf <- fulldf %>% group_by(Quarter = LoanOriginationQuarter, Results) %>%
 
 ggDefaults <- ggplot(defaultsdf, aes(x = Quarter, y = Loans, fill = Results)) +
     geom_bar(stat = "identity") +
-    theme(axis.text.x = element_text(angle = 90, vjust = 0.5),
+    theme(axis.text.x = element_text(angle = -90, vjust = 0.5),
           axis.title.x = element_blank()) +
     ylab("Originations (Thousands)") +
     ggtitle("Results of Loans Originated through FY 2013")
@@ -246,11 +249,12 @@ The default rate does not show increasing risk that I would expect.  I plan to i
 ## Bivariate Plots Section
 ### Boxplots
 I just want to try making some boxplots.  Boxplots compare a numeric variable to a factor variable.  Well, we have a numeric version of the ProsperRating.
+
 ```{r}
 boxplot(ProsperRating ~ ProsperRatingCategory, data = fulldf)
 ```
 
-Well, that's the most boring thing ever.  The numeric rating is just the levels of the Categories.  Well, I can get the ordering over with by combining the two columns.  I'll just call the result Rating, since I'm tired of typing ProsperRating.  Now, what will make a nice boxplot . . . CreditScore!  We can see how the two measures compare.
+Well, that's the most boring thing ever.  The numeric rating is just the levels of the Categories.  Well, I can get the ordering over with by combining the two columns.  I'll just call the result Rating, since I'm tired of typing ProsperRating.  Now, what will make a nice boxplot . . . CreditScore!  We can then see how the two measures compare.
 
 ```{r}
 fulldf <- fulldf %>% 
@@ -260,9 +264,6 @@ fulldf <- fulldf %>%
                           labels = c("Q", "HR", "E", "D", "C", "B", "A", "AA")))
 
 boxplot(CreditScore ~ Rating, data = fulldf, ylim = c(600, 850))
-c(cor(as.numeric(fulldf$CreditScore), as.numeric(fulldf$Rating)), 
-  cor(fulldf$CreditScore, fulldf$ProsperScore), 
-  cor(fulldf$CreditScore, as.numeric(fulldf$CreditGrade)))
 ```
 
 The trend is generally that higher ratings have higher credit scores, but Prosper clearly uses more than credit score, since there is a lot of overlap between the ratings.  
@@ -285,7 +286,7 @@ ggCatdefaults <- ggplot(data = catdefaultsdf,
                         aes(x = Quarter, y = Loans, 
                             color = Rating, group = Rating)) +
                  geom_line() +
-                 theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+                 theme(axis.text.x = element_text(angle = -90, vjust = 0.5)) +
                  scale_colour_brewer(palette = "Reds") +
                  xlab("Loan Origination") +
                  ylab("Defaults (Thousands)") +
@@ -315,7 +316,7 @@ ggCatdefaults <- ggplot(data = subset(catdefaultsdf, as.numeric(Results) < 2),
                             color = Rating, group = Rating)) +
                  geom_line() +
                  scale_colour_brewer(palette = "Reds") +
-                 theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+                 theme(axis.text.x = element_text(angle = -90, vjust = 0.5)) +
                  xlab("Loan Origination") +
                  ggtitle("Defaults for Loans Originated through FY 2013")
 ggCatdefaults
@@ -335,7 +336,7 @@ ggCatRateDefaults <- ggplot(data = subset(catRateDefaultsdf,
                         aes(x = Quarter, y = Rate * 100, 
                             color = Rating, group = Rating)) +
                  geom_line() +
-                 theme(axis.text.x = element_text(angle = 90, vjust = 0.5)) +
+                 theme(axis.text.x = element_text(angle = -90, vjust = 0.5)) +
                  xlab("Loan Origination") +
                  ylab("Rate (percentage)") +
                  ggtitle("Default Rate for Loans Originated through FY 2013")
@@ -375,6 +376,7 @@ ggLossCatTime <- ggplot(data = arrange(fulldf, Results),
                  aes(x = LoanOriginationQuarter, 
                      y = LP_GrossPrincipalLoss / LoanOriginalAmount)) +
                  geom_bar(stat = "summary", fun.y = mean) +
+                 theme(axis.text.x = element_blank()) +
                  facet_wrap(~Rating)
 ggLossCatTime
 ```
@@ -398,7 +400,9 @@ loans <- fulldf %>%
                 CreditScore, RevolvingCreditBalance, 
                 AvailableBankcardCredit, StatedMonthlyIncome) %>% 
          droplevels()
+print("Dimensions of new dataset")
 dim(loans)
+print("Loan results by rating")
 table(loans$Results, loans$Rating)
 ```
 
@@ -429,12 +433,13 @@ dim(loans2)
 That seems to be enough to play with to see what factors affect default rate. Let's try the Profit/Origination Plot again.
 
 ```{r}
-ggplot(loans2, aes(LoanOriginationDate, InvestorProfitRate)) +  
-    geom_point(aes(color = factor(Term)), alpha = 0.3) + 
-    geom_smooth()
+x <- ggplot(loans2, aes(LoanOriginationDate, InvestorProfitRate)) +  
+     geom_point(aes(color = factor(Term)), alpha = 0.3) + 
+     geom_smooth()
+suppressMessages(print(x))
 ```
 
-Now there is an average profit for investors, though not by much for the one year loans.  There is also not much overlap between the two terms, only about six months.  They look like two different populations.  I think I'll just look at the 36 month loans.
+Now there is an average profit for investors, though not by much for the one year loans.  There is also not much overlap between the two terms, only about six months.  They look like two different populations.  I think I'll just look at the 36 month loans.  How many are there?
 
 ```{r}
 loans2 <- loans2 %>% 
@@ -490,9 +495,11 @@ There is also a correlation between StatedMonthlyIncome and both  LoanOriginalAm
 ```{r}
 g1 <- ggplot(loans2, aes(LoanOriginalAmount, StatedMonthlyIncome)) +
       geom_point(aes(col = Results), position = "jitter") +
+      theme(legend.position = "none") +
       geom_smooth(method = lm)
 g2 <- ggplot(loans2, aes(LoanOriginalAmount, RevolvingCreditBalance)) +
       geom_point(aes(col = Results), position = "jitter") +
+      theme(legend.position = c(1,1)) +
       geom_smooth(method = lm)
 grid.arrange(g1, g2, nrow = 1)
 ```
@@ -529,6 +536,7 @@ This would be the start of a model for credit score.  The residuals show a clear
 fitip <- lm(InvestorProfitRate ~ BorrowerAPR + LoanOriginalAmount + 
             StatedMonthlyIncome, loans2[loans2$StatedMonthlyIncome < 25000, ])
 summary(fitip)
+par(mfrow = c(2,2))
 plot(fitip)
 ```
 
@@ -542,15 +550,15 @@ hist(loans2$InvestorProfitRate)
 I'm really looking forward to the next course on Machine Learning.  I'm hoping to really improve my understanding of modeling and predictive functions.  I found a [site](https://www.lendingharbor.com/contact/faq) where someone has modeled just this sort of data and is making money off of it.
 
 ## Multivariate Analysis
-#### Talk about some of the relationships you observed in this part of the investigation. Were there features that strengthened each other in terms of looking at your feature(s) of interest?
+#### Talk about some of the relationships you observed in this part of the investigation. Were there features that strengthened each other in terms of looking at your feature(s) of interest?  
 I first looked at the relationship of income and available credit to credit score.  These two values are enough to explain a third of the credit score value once I included an interaction term.  This interesting because credit scores are not based on income.  The plot of residuals indicates that more variables need to be included in the model.
 
-#### Were there any interesting or surprising interactions between features?
+#### Were there any interesting or surprising interactions between features?  
 I found it interesting that larger loan requests were associated with larger incomes and with higher credit scores.  Overall, correlations were lower than I expected. 
 
-#### OPTIONAL: Did you create any models with your dataset? Discuss the strengths and limitations of your model.
+#### OPTIONAL: Did you create any models with your dataset? Discuss the strengths and limitations of your model.  
+
 I think it might be better to estimate a rate of defaults, but I'm not sure how to define the population that I would divide the number of defaults by.  I can calculate the percentage of defaults for each rating, but since the rating is attempting to separate loans by default risk, the reasoning seems circular.  I did a little googling and discovered that this type of modeling is far beyond my experience.  [This paper](http://papers.ssrn.com/sol3/papers.cfm?abstract_id=2529240) uses something called a discrete-time hazard model to analyze defaults using Lending Club data.  Lending club is another peer-to-peer lending platform.  Developing models of default risk is very much an active area of research.
-------
 
 # Final Plots and Summary
 
@@ -587,9 +595,9 @@ plot3a <- ggplot(data = filter(fulldf, Rating != "NA") %>% droplevels(),
           geom_line(aes(y = 100 * LP_InterestandFees / LoanOriginalAmount, 
                         group = 1), 
                     stat = "summary", fun.y = mean, color = "green4", lwd = 1) +
-          theme(axis.ticks = element_blank(), axis.text.x = element_blank(),
-                axis.title.x = element_blank()) +
-          ylab("Percentage of Origination Dollars") +
+          theme(axis.ticks = element_blank(), axis.text.x = element_blank()) +
+          ylab("Percentage of Origination") +
+          xlab("Quarterly Results 2006 - 2013 by Prosper Rating Category") + 
           ggtitle("Principal Lost (black) v. Interest and Fees Collected (green)")
 plot3b <- ggplot(data = filter(fulldf, Rating != "NA") %>% droplevels(),
                  aes(x = LoanOriginationQuarter, 
@@ -600,16 +608,15 @@ plot3b <- ggplot(data = filter(fulldf, Rating != "NA") %>% droplevels(),
           geom_line(stat = "summary", fun.y = mean, lwd = 1) +
           geom_hline(y = 0, color = "red3") +
           facet_grid(~Rating) +
-          theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(),
-                axis.title.x = element_blank()) +
+          theme(axis.ticks.x = element_blank(), axis.text.x = element_blank()) +
           ylab("Percentage") +
+          xlab("Quarterly Results 2006 - 2013 by Prosper Rating Category") + 
           ggtitle("Return on Investment (ROI) After Fees")
 grid.arrange(plot3a, plot3b, nrow = 2)
 ```
 
 ### Description Three
 While every rating category experiences defaults, investors make money by collecting more (on average) in interest and fees than the principal lost to defaulting borrowers.  Here, principal lost, service fees, and collection fees are subtracted from the interest and (borrower) fees paid to investors.  All rating categories have generated impressive profits since 2009, with generally higher volatility in riskier categories.  This chart explains why peer-to-peer lending is such a hot topic in investing circles.  
-------
 
 # Reflection
 I came into this project expecting it to be easy since I had already learned R and covered EDA as part of the Coursera Data Science Specialization that I'm working on concurrently.  Always aiming to be Udacious, I selected the most difficult looking dataset and confidently predicted that I'd be done in a week.  Instead, this project has taught me some deep lessons about data science.
